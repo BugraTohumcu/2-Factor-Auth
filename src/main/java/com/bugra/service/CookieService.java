@@ -2,13 +2,15 @@ package com.bugra.service;
 
 import com.bugra.exceptions.JwtException;
 import com.bugra.security.JwtTokenProvider;
-import com.bugra.types.Token;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Arrays;
+
+import static com.bugra.types.Token.access_token;
 
 @Service
 public class CookieService {
@@ -21,7 +23,7 @@ public class CookieService {
     }
 
     public ResponseCookie setTokensInCookies(String cookieName, String cookieValue) {
-        int expiration = 1000 * 60 * 60 * 24;
+        long expiration = Duration.ofHours(24).getSeconds();
         return ResponseCookie.from(cookieName, cookieValue)
                 .secure(true)
                 .sameSite("None")
@@ -32,9 +34,8 @@ public class CookieService {
     }
 
     public String getUserIdFromCookies(HttpServletRequest request) {
-        String token = extractTokenFromCookies(Token.access_token.toString(), request);
+        String token = extractTokenFromCookies(access_token.toString(), request);
         return tokenProvider.extractId(token);
-
     }
 
     public String extractTokenFromCookies(String tokenName ,HttpServletRequest request) {

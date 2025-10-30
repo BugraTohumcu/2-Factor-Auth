@@ -6,8 +6,8 @@ import com.bugra.dto.ResponsePattern;
 import com.bugra.dto.UserResponse;
 import com.bugra.facade.AuthFacade;
 import com.bugra.mapper.UserResponseMapper;
-import com.bugra.model.RefreshToken;
 import com.bugra.model.User;
+import com.bugra.service.JwtService;
 import com.bugra.service.UserService;
 import com.bugra.shared.AuthMessages;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,10 +25,12 @@ public class AuthController {
     private final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final UserService userService;
     private final AuthFacade authFacade;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService, AuthFacade authFacade) {
+    public AuthController(UserService userService, AuthFacade authFacade, JwtService jwtService) {
         this.userService = userService;
         this.authFacade = authFacade;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/login")
@@ -62,14 +64,17 @@ public class AuthController {
     @GetMapping("/user")
     public ResponseEntity<ResponsePattern<UserResponse>>
     getUser(HttpServletRequest request){
-        UserResponse userResponses = userService.getUser(request);
-        return ResponseEntity.ok(new ResponsePattern<>("User Info Fetched",userResponses,true));
+        logger.info("User: {} is fetching user info", request.getUserPrincipal().getName());
+        User user = userService.getUser(request);
+        UserResponse userResponse = UserResponseMapper.mapToUserResponse(user);
+        return ResponseEntity.ok(new ResponsePattern<>("User Info Fetched",userResponse,true));
     }
 
     @PostMapping("/refresh_token")
-    public ResponseEntity<ResponsePattern<?>>
-    refreshToken(HttpServletRequest request) {
-
-        return null;
+    public ResponseEntity<ResponsePattern<String>>
+    refreshToken(HttpServletRequest request,HttpServletResponse response) {
+        User user = userService.getUser(request);
+        jwtService.refreshToken(user,request,response);
+        return ResponseEntity.ok(new ResponsePattern<>("Tokens Refreshed",null,true));
     }
 }

@@ -2,16 +2,20 @@ package com.bugra.security;
 
 import com.bugra.dto.UserResponse;
 import com.bugra.exceptions.JwtException;
+import com.bugra.security.dto.TokenPayload;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.antlr.v4.runtime.Token;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,14 +28,14 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secret;
 
-    public String generateAccessToken(UserResponse payload) {
+    public String generateAccessToken(TokenPayload payload) {
 
         Map<String,Object> claims = new HashMap<>();
         claims.put("id",payload.id());
         claims.put("username",payload.username());
         claims.put("email",payload.email());
 
-        int expiration = 100 * 30;
+        long expiration = Duration.ofMinutes(15).toMillis();
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(payload.id())
@@ -41,11 +45,11 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateRefreshToken(UserResponse payload) {
+    public String generateRefreshToken(TokenPayload payload) {
         Map<String,Object> claims = new HashMap<>();
         claims.put("id",payload.id());
 
-        int expiration = 1000 * 60 * 60 * 24 * 7;
+        long expiration = Duration.ofDays(7).toMillis();
         return Jwts.builder()
                 .setClaims(claims)
                 .setId(UUID.randomUUID().toString())
@@ -84,15 +88,19 @@ public class JwtTokenProvider {
     }
 
     public Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSecretKey())
-                .build().parseClaimsJws(token).getBody();
+        try{
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSecretKey())
+                    .build().parseClaimsJws(token).getBody();
+        }catch (ExpiredJwtException e){
+            return e.getClaims();
+        }
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
         boolean isExpired = isTokenExpired(token);
         if(!extractMail(token).equals(userDetails.getUsername())) throw new UsernameNotFoundException("Invalid username or password");
-        if(isExpired) throw new JwtException("jwt expired", 404);
+        if(isExpired) throw new JwtException("jwt expired", 403);
         return true;
     }
 }

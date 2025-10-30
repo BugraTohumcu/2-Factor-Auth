@@ -1,6 +1,4 @@
 package com.bugra.security;
-
-import com.bugra.exceptions.JwtException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

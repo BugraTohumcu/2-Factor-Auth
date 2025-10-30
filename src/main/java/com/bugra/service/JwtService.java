@@ -1,21 +1,19 @@
 package com.bugra.service;
 
-import com.bugra.dto.UserResponse;
-import com.bugra.model.RefreshToken;
 import com.bugra.model.User;
 import com.bugra.security.JwtTokenProvider;
+import com.bugra.security.dto.TokenPayload;
+import com.bugra.security.dto.TokensRefreshed;
 import com.bugra.types.Token;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+
 
 import static com.bugra.types.Token.access_token;
+import static com.bugra.types.Token.refresh_token;
 
 @Service
 public class JwtService {
@@ -23,7 +21,6 @@ public class JwtService {
     private final JwtTokenProvider jwtTokenProvider;
     private final CookieService cookieService;
     private final RefreshTokenService refreshTokenService;
-    private final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
     public JwtService(JwtTokenProvider jwtTokenProvider, CookieService cookieService, RefreshTokenService refreshTokenService) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -33,20 +30,22 @@ public class JwtService {
 
     public void setJwtCookies(String accessToken, String refreshToken, HttpServletResponse response) {
         ResponseCookie accessCookie = cookieService.setTokensInCookies(access_token.toString(),accessToken);
-        ResponseCookie refreshCookie = cookieService.setTokensInCookies(Token.refresh_token.toString(),refreshToken);
+        ResponseCookie refreshCookie = cookieService.setTokensInCookies(refresh_token.toString(),refreshToken);
         response.addHeader("Set-Cookie", accessCookie.toString());
         response.addHeader("Set-Cookie", refreshCookie.toString());
     }
 
-    public String createToken(Token token_name, UserResponse payload) {
+    public String createToken(Token token_name, TokenPayload payload) {
         return switch (token_name) {
             case access_token -> jwtTokenProvider.generateAccessToken(payload);
             case refresh_token -> jwtTokenProvider.generateRefreshToken(payload);
         };
     }
 
-    public void refreshAccessToken(){
-
+    public void refreshToken(User user,HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = cookieService.extractTokenFromCookies(refresh_token.toString(), request);
+        TokensRefreshed tokens = refreshTokenService.refreshTokens(refreshToken,user);
+        setJwtCookies(tokens.access_token(), tokens.refresh_token(), response);
     }
 
     public String getUserIdFromCookieService(HttpServletRequest request) {
@@ -63,15 +62,7 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         return jwtTokenProvider.validateToken(token, userDetails);
     }
-
     public void saveRefreshToken(String token, User user) {
-        RefreshToken refreshToken = new RefreshToken();
-        Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
-
-        refreshToken.setJti(jwtTokenProvider.extractJti(token));
-        refreshToken.setExpires(expiresAt);
-        refreshToken.setUser(user);
-
-        refreshTokenService.save(refreshToken);
+        refreshTokenService.save(token,user);
     }
 }

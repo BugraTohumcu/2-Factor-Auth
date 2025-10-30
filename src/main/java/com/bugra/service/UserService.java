@@ -55,10 +55,9 @@ public class UserService {
         return user;
     }
 
-    public UserResponse getUser(HttpServletRequest request) {
+    public User getUser(HttpServletRequest request) {
         String userId = jwtService.getUserIdFromCookieService(request);
-        User user = userRepo.findById(userId)
+        return userRepo.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException(AuthMessages.USER_NOT_FOUND));
-        return UserResponseMapper.mapToUserResponse(user);
     }
 }

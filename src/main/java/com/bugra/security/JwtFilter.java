@@ -35,7 +35,7 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try{
             String path = request.getRequestURI();
-            if(path.startsWith("/auth/login") || path.startsWith("/auth/register")){
+            if(path.startsWith("/auth/login") || path.startsWith("/auth/register") || path.startsWith("/auth/refresh_token")){
                 filterChain.doFilter(request,response);
                 return;
             }
@@ -54,9 +54,8 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
 
             }
-
+            filterChain.doFilter(request,response);
         }catch (Exception e){
-            if(e.getClass() == ExpiredJwtException.class) logger.warn("Expired JWT token");
             logger.error(e.getMessage());
             request.setAttribute("jwt_error", e.getMessage());
             filterChain.doFilter(request, response);
