@@ -82,10 +82,3 @@ Base path: `/auth`
 4) Refresh token
 
 - POST `/auth/refresh_token` is present in `AuthController` but currently returns `null` (unimplemented). See `RefreshTokenService` and `RefreshToken` model for intended behavior.
-
-## Notes / Observations
-
-- The DTO validation in `RegisterUser` and `LoginUser` limits password to max length 6 — this is unusually short for real-world apps and may be intentional for demo purposes. Consider increasing `@Size(max=...)` for production.
-- `refresh_token` endpoint is not implemented in the controller — implement and wire up `RefreshTokenService` and secure the endpoint.
-- Secrets: `jwt.secret` is in properties; move to environment variables for production.
-- Database migrations are not included (Hibernate `ddl-auto=update` is used). For production consider Flyway or Liquibase.
